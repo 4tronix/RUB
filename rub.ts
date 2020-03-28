@@ -15,7 +15,7 @@ enum ledMode
  * Custom blocks
  */
 //% weight=50 color=#e7660b icon="\uf021"
-namespace orbit
+namespace rub
 {
     let band: fireled.Band;
     let ledPin = DigitalPin.P2;
@@ -37,7 +37,7 @@ namespace orbit
       * @param Closed Degrees when fully closed (0 to 180). eg: 70
       * @param Open Degrees when fully open (0 to 180). eg: 150
       */
-    //% blockId="SetServo" block="set 01 closed to%Closed|, open to%Open"
+    //% blockId="SetServoLimits" block="set 02 closed to%Closed|, open to%Open"
     //% weight=100
     //% Closed.min=0 Closed.max=180
     //% Open.min=0 Open.max=180
@@ -72,13 +72,14 @@ namespace orbit
     /**
       * Move Servo at specified speed
       * @param degrees Degrees to turn servo (0 to 180). eg: 90
+      * @param speed speed of moving (1 to 100). eg: 40
       */
     //% blockId="MoveServo" block="move servo to%degrees|degrees at speed%speed"
     //% weight=80
     //% degrees.min=0 degrees.max=180
     //% speed.min=1 speed.max=100
     //% subcategory=Servo
-    export function moveServo(degrees: number): void
+    export function moveServo(degrees: number, speed: number): void
     {
         degrees = clamp(degrees, svClosed, svOpen);
         let delay = Math.round(100/clamp(speed,1,100));
