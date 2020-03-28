@@ -1,0 +1,17 @@
+{
+    "name": "RUB",
+    "version": "0.0.1",
+    "description": "Microsoft MakeCode package for 4tronix Really Useless Box",
+    "license": "MIT",
+    "dependencies": {
+        "core": "*",
+        "fireled": "github:4tronix/FireLedsBase#0.1.4"
+    },
+    "files": [
+        "README.md",
+        "rub.ts"
+    ],
+    "testFiles": [],
+    "yotta": {},
+    "public": true
+}
