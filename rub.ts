@@ -10,6 +10,31 @@ enum ledMode
     Auto
 }
 
+// Servo motion speed
+enum servoSpeed
+{
+    VerySlow,
+    Slow,
+    Medium,
+    Fast,
+    VeryFast
+}
+
+// Servo positions
+enum servoPos
+{
+    Closed,
+    Open,
+    Switched
+}
+
+// Switch events
+enum RubEvents {
+    //% block="off"
+    Off = DAL.MICROBIT_BUTTON_EVT_UP,
+    //% block="on"
+    On = DAL.MICROBIT_BUTTON_EVT_CLICK
+}
 
 /**
  * Custom blocks
@@ -23,33 +48,80 @@ namespace rub
     let updateMode = ledMode.Auto;
     let btEnabled = false;
     let svClosed = 70;
-    let svOpen = 150;
-    let svPos = 90;  // current position of servo in degrees. 90 is centre
+    let svOpen = 90;
+    let svSwitched = 150;
+    let svMoving = false;
+    let svPos = -1;  // current position of servo in degrees. 90 is centre, -1 is unknown
+    let switchInit = true;
 
     function clamp(value: number, min: number, max: number): number
     {
         return Math.max(Math.min(max, value), min);
     }
 
-// Servo Blocks
-    /**
-      * Set Servo Position Limits
-      * @param Closed Degrees when fully closed (0 to 180). eg: 70
-      * @param Open Degrees when fully open (0 to 180). eg: 150
-      */
-    //% blockId="SetServoLimits" block="set 02 closed to%Closed|, open to%Open"
-    //% weight=100
-    //% Closed.min=0 Closed.max=180
-    //% Open.min=0 Open.max=180
-    //% subcategory=Servo
-    export function setServoLimits(Closed: number, Open: number): void
+// Switch Handling Blocks
+
+    function eventInit()
     {
-        svClosed = clamp(Closed,0,180);
-        svOpen = clamp(Open,0,180);
+        if (switchInit)
+        {
+            pins.setPull(DigitalPin.P0, PinPullMode.PullDown)
+            pins.setEvents(DigitalPin.P0, PinEventType.Edge)
+            switchInit = false;
+        }
     }
 
     /**
-      * Position Servo
+      * Registers event code
+      */
+    //% weight=100
+    //% blockId=OnSwitchEvent block="on switch %event"
+    //% subcategory=Switch
+    export function onSwitchEvent(event: RubEvents, handler: Action)
+    {
+        eventInit();
+        control.onEvent(<number>DAL.MICROBIT_ID_IO_P0, <number>event, handler); // register handler
+    }
+
+    /**
+      * check switch state
+      */
+    //% blockId="CheckSwitch" block="switch on"
+    //% weight=90
+    //% subcategory=Switch
+    export function checkSwitch(): boolean
+    {
+	 return pins.digitalReadPin(DigitalPin.P0)==0;
+    }
+
+// Servo Blocks
+    // Convert positon in degrees to microseconds
+    function deg2ms(degrees: number): number
+    {
+        return 500 + (degrees*1000)/90;
+    }
+
+    /**
+      * Set Servo Position Presets
+      * @param closed Degrees when fully closed (0 to 180). eg: 70
+      * @param open Degrees when lid open (0 to 180). eg: 90
+      * @param switched Degrees when switch actuated (0 to 180). eg: 150
+      */
+    //% blockId="SetServoPresets" block="set closed%closed|open%0pen|switched%switched"
+    //% weight=100
+    //% closed.min=0 closed.max=180
+    //% open.min=0 open.max=180
+    //% switched.min=0 switched.max=180
+    //% subcategory=Servo
+    export function setServoPresets(closed: number, open: number, switched: number): void
+    {
+        svClosed = clamp(closed,0,180);
+        svOpen = clamp(open,0,180);
+        svSwitched = clamp(switched,0,180);
+    }
+
+    /**
+      * Position Servo in degrees
       * @param degrees Degrees to turn servo (0 to 180). eg: 90
       */
     //% blockId="SetServo" block="set servo to%degrees|degrees"
@@ -58,37 +130,92 @@ namespace rub
     //% subcategory=Servo
     export function setServo(degrees: number): void
     {
-        degrees = clamp(degrees, svClosed, svOpen);
+        degrees = clamp(degrees, svClosed, svSwitched);
+        while (svMoving)
+            basic.pause(5);
         pins.servoWritePin(AnalogPin.P1, degrees);
         svPos = degrees;
-    }
-
-    // Convert positon in degrees to microseconds
-    function deg2ms(degrees: number): number
-    {
-        return 500 + (degrees*1000)/180;
     }
 
     /**
       * Move Servo at specified speed
       * @param degrees Degrees to turn servo (0 to 180). eg: 90
-      * @param speed speed of moving (1 to 100). eg: 40
+      * @param speed speed of moving (Very Slow to Fast)
       */
     //% blockId="MoveServo" block="move servo to%degrees|degrees at speed%speed"
     //% weight=80
     //% degrees.min=0 degrees.max=180
     //% speed.min=1 speed.max=100
     //% subcategory=Servo
-    export function moveServo(degrees: number, speed: number): void
+    export function moveServo(degrees: number, speed: servoSpeed): void
     {
-        degrees = clamp(degrees, svClosed, svOpen);
-        let delay = Math.round(100/clamp(speed,1,100));
-        for (let pos = deg2ms(svPos); pos <= deg2ms(degrees); pos += ((degrees>svPos) ? 1 : -1))
+        degrees = clamp(degrees, svClosed, svSwitched);
+        let step = 1;
+        let delay = 1;
+        if (svPos == -1)	// first movement always unknown start position
+            speed = servoSpeed.VeryFast;
+        if (speed == servoSpeed.VeryFast)
+            setServo(degrees);
+        else
         {
-            pins.servoSetPulse(AnalogPin.P1, pos);
-            basic.pause(delay);
+            while (svMoving)
+                basic.pause(5);
+            switch (speed)
+            {
+                case servoSpeed.Fast: step=3; break;
+                case servoSpeed.Medium: step=2; break;
+                case servoSpeed.Slow: delay=3; break;
+            }
+            svMoving = true;
+            if (degrees < svPos)
+            {
+                for (let pos = deg2ms(svPos); pos > deg2ms(degrees); pos -= step)
+                {
+                    pins.servoSetPulse(AnalogPin.P1, pos);
+                    basic.pause(delay);
+                }
+            }
+            else
+            {
+                for (let pos = deg2ms(svPos); pos < deg2ms(degrees); pos += step)
+                {
+                    pins.servoSetPulse(AnalogPin.P1, pos);
+                    basic.pause(delay);
+                }
+            }
+            svMoving = false;
         }
         svPos = degrees;
+    }
+
+    /**
+      * Move Servo to predefined point at specified speed
+      * @param position Position: Closed, Open or Switched
+      * @param speed speed of moving (Very Slow to Fast)
+      */
+    //% blockId="PositionServo" block="move servo to%position|at speed %speed"
+    //% weight=70
+    //% subcategory=Servo
+    export function positionServo(position: servoPos, speed: servoSpeed): void
+    {
+        switch (position)
+        {
+            case servoPos.Closed: moveServo(svClosed, speed); break;
+            case servoPos.Open: moveServo(svOpen, speed); break;
+            case servoPos.Switched: moveServo(svSwitched, speed); break;
+        }
+    }
+
+    /**
+      * Wait until servo has reached target position
+      */
+    //% blockId="WaitServo" block="wait for servo"
+    //% weight=60
+    //% subcategory=Servo
+    export function waitServo(servo: number): void
+    {
+        while (svMoving)
+            basic.pause(5);
     }
 
 
