@@ -39,7 +39,7 @@ enum RubEvents {
 /**
  * Custom blocks
  */
-//% weight=50 color=#e7660b icon="\uf021"
+//% weight=50 color=#e7660b icon="\uf187"
 namespace rub
 {
     let band: fireled.Band;
@@ -162,7 +162,7 @@ namespace rub
                 basic.pause(5);
             switch (speed)
             {
-                case servoSpeed.Fast: step=3; break;
+                case servoSpeed.Fast: step=5; break;
                 case servoSpeed.Medium: step=2; break;
                 case servoSpeed.Slow: delay=3; break;
             }
