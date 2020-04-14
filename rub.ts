@@ -212,7 +212,7 @@ namespace rub
     //% blockId="WaitServo" block="wait for servo"
     //% weight=60
     //% subcategory=Servo
-    export function waitServo(servo: number): void
+    export function waitServo(): void
     {
         while (svMoving)
             basic.pause(5);
