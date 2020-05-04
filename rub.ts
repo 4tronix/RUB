@@ -107,7 +107,7 @@ namespace rub
       * @param open Degrees when lid open (0 to 180). eg: 90
       * @param switched Degrees when switch actuated (0 to 180). eg: 150
       */
-    //% blockId="SetServoPresets" block="set closed%closed|open%0pen|switched%switched"
+    //% blockId="SetServoPresets" block="set closed%closed|open%open|switched%switched"
     //% weight=100
     //% closed.min=0 closed.max=180
     //% open.min=0 open.max=180
