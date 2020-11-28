@@ -31,9 +31,9 @@ enum servoPos
 // Switch events
 enum RubEvents {
     //% block="off"
-    Off = DAL.MICROBIT_BUTTON_EVT_UP,
+    Off = DAL.MICROBIT_PIN_EVT_RISE,
     //% block="on"
-    On = DAL.MICROBIT_BUTTON_EVT_CLICK
+    On = DAL.MICROBIT_PIN_EVT_FALL
 }
 
 /**
@@ -75,12 +75,12 @@ namespace rub
       * Registers event code
       */
     //% weight=100
-    //% blockId=OnSwitchEvent block="on switch %event"
+    //% blockId=OnSwitchEvent block="on Switch %event"
     //% subcategory=Switch
     export function onSwitchEvent(event: RubEvents, handler: Action)
     {
         eventInit();
-        control.onEvent(<number>DAL.MICROBIT_ID_IO_P0, <number>event, handler); // register handler
+        control.onEvent(DigitalPin.P0, <number>event, handler); // register handler
     }
 
     /**
